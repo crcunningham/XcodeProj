@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PBXProductType: RawRepresentable, Decodable, Equatable, Hashable {
+public struct PBXProductType: RawRepresentable, Decodable, Hashable {
   public var rawValue: String
 
   public static let none = PBXProductType(rawValue: "")
