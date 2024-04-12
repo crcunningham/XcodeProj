@@ -1,4 +1,5 @@
 import Foundation
+@_implementationOnly import NIOConcurrencyHelpers
 
 public struct PBXProductType: RawRepresentable, Decodable, Hashable {
   public var rawValue: String
@@ -118,14 +119,14 @@ public struct PBXProductType: RawRepresentable, Decodable, Hashable {
     }
   }
 
-  private static let _customTypes = StateLock<Set<PBXCustomProductType>>([])
+  private static let _customTypes = NIOLockedValueBox<Set<PBXCustomProductType>>([])
 
   /// Adds a custom product type to the list of known types. Thread-safe.
   public static func addCustomType(_ type: PBXProductType, fileExtension: String?) {
     guard !knownTypes.contains(type) else { return }
 
     let customType = PBXCustomProductType(productType: type, fileExtension: fileExtension)
-    _customTypes.withLock {
+    let _ = _customTypes.withLockedValue {
       $0.insert(customType)
     }
   }
@@ -172,26 +173,8 @@ public struct PBXProductType: RawRepresentable, Decodable, Hashable {
       return nil
     default:
       // fall back to a custom type
-      let custom = Self._customTypes.withLock { $0 }
+      let custom = Self._customTypes.withLockedValue { $0 }
       return custom.first { $0.productType == self }?.fileExtension
-    }
-  }
-}
-
-// MARK: - StateLock
-
-private class StateLock<T> {
-  private var state: T
-  private let lock = NSLock()
-
-  init(_ state: T) {
-    self.state = state
-  }
-
-  @discardableResult
-  func withLock<R>(_ block: (inout T) -> R) -> R {
-    return self.lock.withLock {
-      return block(&self.state)
     }
   }
 }
